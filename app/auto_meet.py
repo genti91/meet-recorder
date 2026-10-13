@@ -318,18 +318,33 @@ return null;
 """
 
 JS_PARTICIPANTS = r"""
-// 1) Insignia numérica junto al botón de "Personas"
-const badge = document.querySelector('div.uGOf1d');
-if (badge && /^\d+$/.test(badge.textContent.trim())) return parseInt(badge.textContent.trim());
-// 2) Cualquier aria-label del tipo "12 participantes" / "12 people"
-for (const el of document.querySelectorAll('[aria-label]')) {
-  const m = el.getAttribute('aria-label').match(/(\d+)\s*(participant|persona|people|asistente|contact)/i);
-  if (m) return parseInt(m[1]);
+// Meet puede mostrar sólo dos mosaicos de vídeo aunque haya más asistentes.
+// El contador real aparece en la esquina superior derecha, junto a los avatares.
+const corner = [];
+for (const el of document.querySelectorAll('span, div, button')) {
+  const value = (el.innerText || el.textContent || '').trim();
+  if (!/^\d{1,3}$/.test(value)) continue;
+  if ([...el.children].some(child => (child.innerText || child.textContent || '').trim() === value)) continue;
+  const r = el.getBoundingClientRect();
+  if (r.width > 0 && r.width < 80 && r.height > 0 && r.height < 55 &&
+      r.top >= 0 && r.bottom < Math.min(120, innerHeight * 0.18) &&
+      r.left > innerWidth * 0.65) corner.push(parseInt(value, 10));
 }
-// 3) Tiles de vídeo visibles
+if (corner.length) return {count: Math.max(...corner), source: 'corner'};
+// Etiquetas accesibles, con el número antes o después de "personas".
+for (const el of document.querySelectorAll('[aria-label]')) {
+  const label = el.getAttribute('aria-label') || '';
+  const m = label.match(/(\d+)\s*(?:participant|persona|people|asistente|contact)/i) ||
+            label.match(/(?:participant|persona|people|asistente|contact)[^\d]{0,20}(\d+)/i);
+  if (m) return {count: parseInt(m[1], 10), source: 'aria'};
+}
+const badge = document.querySelector('div.uGOf1d');
+if (badge && /^\d+$/.test(badge.textContent.trim()))
+  return {count: parseInt(badge.textContent.trim(), 10), source: 'badge'};
+// Último recurso: mosaicos visibles (puede subestimar el total).
 const tiles = document.querySelectorAll('[data-participant-id]');
-if (tiles.length) return tiles.length;
-return -1;
+if (tiles.length) return {count: tiles.length, source: 'tiles'};
+return {count: -1, source: 'unknown'};
 """
 
 JS_INBOUND_VIDEO = r"""
@@ -642,15 +657,16 @@ def monitor_meeting(driver):
         else:
             not_in_call = 0
 
-        count = js(driver, JS_PARTICIPANTS)
-        count = -1 if count is None else int(count)
+        participants = js(driver, JS_PARTICIPANTS) or {}
+        count = int(participants.get("count", -1))
         if count > 0:
             peak = max(peak, count)
             if not started and count >= 2:
                 started = True
                 log.info("Reunión iniciada (%d asistentes)", count)
         elapsed = int(now - joined_at)
-        log.info("asistentes=%s pico=%d iniciada=%s t=%ds", count if count > 0 else "?", peak, started, elapsed)
+        log.info("asistentes=%s fuente=%s pico=%d iniciada=%s t=%ds",
+                 count if count > 0 else "?", participants.get("source", "unknown"), peak, started, elapsed)
         # Vídeo entrante: si los fotogramas dejan de avanzar con la conexión viva, el emisor/red se ha parado
         try:
             driver.set_script_timeout(10)

@@ -19,5 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY app/ /app/
+COPY tests/ /app/tests/
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/sh", "/app/entrypoint.sh"]
 CMD ["python3", "/app/scheduler.py"]

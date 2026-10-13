@@ -17,3 +17,5 @@ jobs:
         run: |
           docker run --rm meet-recorder:test python3 -c 'import selenium, scheduler, auto_meet, notify; print("imports OK")'
           docker run --rm meet-recorder:test sh -c 'chromium --version && chromedriver --version && ffmpeg -version | head -n 1'
+      - name: Check participant count
+        run: docker run --rm meet-recorder:test python3 /app/tests/test_participants.py
