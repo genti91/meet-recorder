@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 -s /bin/sh recorder \
     && mkdir -p /data/profile /data/recordings /data/logs /data/state "$XDG_RUNTIME_DIR" \
+    && mkdir -p /etc/chromium/policies/managed \
+    && printf '%s\n' '{"BrowserSignin":0,"SyncDisabled":true,"MetricsReportingEnabled":false}' > /etc/chromium/policies/managed/meet-recorder.json \
     && chown recorder:recorder "$XDG_RUNTIME_DIR" \
     && chmod 700 "$XDG_RUNTIME_DIR"
 

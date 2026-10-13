@@ -9,6 +9,7 @@ x11vnc -display :99 -forever -shared -nopw -listen 127.0.0.1 -rfbport 5900 -bg >
 websockify --web=/usr/share/novnc 0.0.0.0:6080 127.0.0.1:5900 &
 echo 'Abrí http://localhost:6080/vnc.html para iniciar sesión en Google.'
 exec chromium --no-sandbox --disable-dev-shm-usage --disable-gpu \
+  --allow-browser-signin=false \
   --user-data-dir=/data/profile --password-store=basic \
   --no-first-run --no-default-browser-check \
   --window-size=1280,720 https://accounts.google.com/
