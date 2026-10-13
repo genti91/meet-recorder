@@ -1,0 +1,45 @@
+services:
+  recorder:
+    build: .
+    env_file: .env
+    environment:
+      PROFILE_DIR: /data/profile
+      OUT_DIR: /data/recordings
+      LOG_DIR: /data/logs
+    volumes:
+      - profile:/data/profile
+      - recordings:/data/recordings
+      - logs:/data/logs
+      - state:/data/state
+    restart: unless-stopped
+    shm_size: 512m
+
+  login:
+    build: .
+    profiles: [setup]
+    env_file: .env
+    command: ["sh", "/app/login.sh"]
+    ports:
+      - "127.0.0.1:6080:6080"
+    volumes:
+      - profile:/data/profile
+    shm_size: 512m
+
+  player:
+    build: .
+    env_file: .env
+    environment:
+      RECORDINGS_DIR: /data/recordings
+      RECORDINGS_HOST: 0.0.0.0
+    command: ["python3", "/app/recordings_server.py"]
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - recordings:/data/recordings:ro
+    restart: unless-stopped
+
+volumes:
+  profile:
+  recordings:
+  logs:
+  state:

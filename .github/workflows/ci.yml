@@ -1,0 +1,19 @@
+name: Build and check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Compose file
+        run: cp .env.example .env && docker compose config --quiet
+      - name: Build image
+        run: docker build -t meet-recorder:test .
+      - name: Check Python and browser dependencies
+        run: |
+          docker run --rm meet-recorder:test python3 -c 'import selenium, scheduler, auto_meet, notify; print("imports OK")'
+          docker run --rm meet-recorder:test sh -c 'chromium --version && chromedriver --version && ffmpeg -version | head -n 1'
